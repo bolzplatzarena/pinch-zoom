@@ -14,6 +14,11 @@
     "declaration": false,
     "experimentalDecorators": true,
     "moduleResolution": "node",
+    "paths": {
+      "pinch-zoom": [
+        "./dist/pinch-zoom"
+      ]
+    },
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",

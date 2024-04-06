@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "pinch-zoom": {
+    "pinch-zoom-example": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/pinch-zoom",
+            "outputPath": "dist/pinch-zoom-example",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -62,10 +62,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "pinch-zoom:build:production"
+              "buildTarget": "pinch-zoom-example:build:production"
             },
             "development": {
-              "buildTarget": "pinch-zoom:build:development"
+              "buildTarget": "pinch-zoom-example:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -73,7 +73,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "pinch-zoom:build"
+            "buildTarget": "pinch-zoom-example:build"
           }
         },
         "test": {
@@ -93,6 +93,39 @@
               "src/styles.scss"
             ],
             "scripts": []
+          }
+        }
+      }
+    },
+    "pinch-zoom": {
+      "projectType": "library",
+      "root": "projects/pinch-zoom",
+      "sourceRoot": "projects/pinch-zoom/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "projects/pinch-zoom/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/pinch-zoom/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/pinch-zoom/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "tsConfig": "projects/pinch-zoom/tsconfig.spec.json",
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ]
           }
         }
       }
