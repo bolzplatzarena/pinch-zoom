@@ -56,17 +56,18 @@ export class PinchZoomComponent implements OnDestroy {
 
   @HostListener('wheel', ['$event'])
   onWheel(event: WheelEvent): void {
+    const oldScale = this.scale;
     this.scale += event.deltaY * 0.01;
     this.limitScale();
-    this.moveTopLeft();
-    this.update();
+    this.moveImage(event, oldScale);
+    this.updateImageElement();
   }
 
   @HostListener('mousedown', ['$event'])
   @HostListener('touchstart', ['$event'])
   onBeginMove(event: UIEvent): void {
     const { clientX, clientY } = this.getPositionFor(event, 0);
-    const elementPosition = this.container().nativeElement.getBoundingClientRect()
+    const elementPosition = this.container().nativeElement.getBoundingClientRect();
     this.startX = clientX - elementPosition.left;
     this.startY = clientY - elementPosition.top;
 
@@ -74,8 +75,9 @@ export class PinchZoomComponent implements OnDestroy {
     this.originalTop = this.top;
   }
 
-  @HostListener('mouseup')
-  @HostListener('touchend')
+  // it doesn't matter where the mouse is, we just want to stop moving
+  @HostListener('document:mouseup')
+  @HostListener('document:touchend')
   onEndMove(): void {
     this.startX = null;
     this.startY = null;
@@ -87,7 +89,7 @@ export class PinchZoomComponent implements OnDestroy {
     if(this.scale === this.originalScale || this.startX === null || this.startY === null){
       return;
     }
-    console.log('moving');
+
     const { clientX, clientY } = this.getPositionFor(event, 0);
     const left = clientX - this.container().nativeElement.getBoundingClientRect().left;
     const top = clientY - this.container().nativeElement.getBoundingClientRect().top;
@@ -95,7 +97,7 @@ export class PinchZoomComponent implements OnDestroy {
     this.left = this.originalLeft + (left - this.startX!);
     this.top = this.originalTop + (top - this.startY!);
 
-    this.update();
+    this.updateImageElement();
   }
 
   private setup(): void {
@@ -107,25 +109,14 @@ export class PinchZoomComponent implements OnDestroy {
     // calculate the scale factor to ensure image fits in container using matrix
     this.scale = Math.min(clientWidth / naturalWidth, clientHeight / naturalHeight);
     this.originalScale = this.scale;
-    // apply the scale factor to the image
-    this.left = (clientWidth - naturalWidth) / 2;
+
+    this.updateImageElement();
     this.originalLeft = this.left;
-    this.top = (clientHeight - naturalHeight) / 2;
     this.originalTop = this.top;
-
-    this.update();
   }
 
-  private moveTopLeft(): void {
-    const { clientHeight, clientWidth } = this.container()!.nativeElement;
-    const { naturalHeight, naturalWidth } = this.image()!.nativeElement;
-
-    // bind to top left
-    this.left = (clientWidth * (this.scale / this.originalScale) - naturalWidth) / 2;
-    this.top = (clientHeight * (this.scale / this.originalScale) - naturalHeight) / 2;
-  }
-
-
+  // limit the scale to a minimum of the initial scale and a maximum of 10
+  // this means you can only zoom in
   private limitScale(): void {
     if(this.scale < this.originalScale){
       this.scale = this.originalScale;
@@ -135,7 +126,7 @@ export class PinchZoomComponent implements OnDestroy {
     }
   }
 
-  private update(): void {
+  private updateImageElement(): void {
     this.limitScale();
     this.limitPosition();
 
@@ -152,6 +143,9 @@ export class PinchZoomComponent implements OnDestroy {
     } else if (isMouseEvent(event)) {
       clientX = event.clientX;
       clientY = event.clientY;
+    } else if (isPositionEvent(event)) {
+      clientX = event.clientX;
+      clientY = event.clientY;
     }
 
     return {
@@ -166,20 +160,35 @@ export class PinchZoomComponent implements OnDestroy {
 
     const scaledImgHeight = naturalHeight * this.scale;
 
-    const imgOffsetTop = (clientHeight * (this.scale / this.originalScale) - naturalHeight) / 2;
-    const imgOffsetLeft = (clientWidth * (this.scale / this.originalScale) - naturalWidth) / 2;
+    const maxTop = (clientHeight * (this.scale / this.originalScale) - naturalHeight) / 2;
+    const minTop = maxTop - scaledImgHeight + clientHeight;
 
-    if(this.top > imgOffsetTop){
-      this.top = imgOffsetTop;
-    } else if (scaledImgHeight + Math.abs(imgOffsetTop) - clientHeight + this.top < 0) {
-      this.top = -(scaledImgHeight + Math.abs(imgOffsetTop) - clientHeight);
+    const maxLeft = (clientWidth * (this.scale / this.originalScale) - naturalWidth) / 2;
+    const minLeft = maxLeft - naturalWidth * this.scale + clientWidth;
+
+    if(this.top > maxTop){
+      this.top = maxTop;
+    } else if (this.top < minTop) {
+      this.top = minTop;
     }
 
-    if(this.left > imgOffsetLeft){
-      this.left = imgOffsetLeft;
-    } else if (naturalWidth * this.scale + Math.abs(imgOffsetLeft) - clientWidth + this.left < 0) {
-      this.left = -(naturalWidth * this.scale + Math.abs(imgOffsetLeft) - clientWidth);
+    if(this.left > maxLeft){
+      this.left = maxLeft;
+    } else if (this.left < minLeft) {
+      this.left = minLeft;
     }
+  }
+
+  private moveImage(event: UIEvent, oldScale: number): void {
+    const { clientX, clientY } = this.getPositionFor(event, 0);
+    const elementPosition = this.container().nativeElement.getBoundingClientRect();
+
+    const xCenter = clientX - elementPosition.left;
+    const yCenter = clientY - elementPosition.top;
+    const scalingPercent = this.scale / this.originalScale;
+    console.log(xCenter, yCenter);
+    this.left = this.left - (scalingPercent * xCenter - xCenter);
+    this.top = this.top - (scalingPercent * yCenter - yCenter);
   }
 }
 
@@ -189,4 +198,8 @@ function isMouseEvent(event: UIEvent): event is MouseEvent {
 
 function isTouchEvent(event: UIEvent): event is TouchEvent {
   return event.type === 'touchstart' || event.type === 'touchmove';
+}
+
+function isPositionEvent(event: UIEvent): event is UIEvent & { clientX: number; clientY: number } {
+  return (event as any).clientX !== undefined;
 }
