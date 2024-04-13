@@ -4,10 +4,8 @@ import {
   effect,
   ElementRef,
   HostListener,
-  OnDestroy,
   viewChild,
 } from '@angular/core';
-import { PinchZoomService } from './pinch-zoom.service';
 
 const config = {
   maxScale: 10,
@@ -26,9 +24,8 @@ const config = {
   host: {
     style: 'display: block; width: 100%; height: 100%;'
   },
-  providers: [PinchZoomService]
 })
-export class PinchZoomComponent implements OnDestroy {
+export class PinchZoomComponent {
   private readonly image = contentChild.required<ElementRef<HTMLImageElement>>('img');
   private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('container');
 
@@ -42,16 +39,12 @@ export class PinchZoomComponent implements OnDestroy {
   private startX : number | null = null;
   private startY : number | null = null;
 
-  constructor(private readonly pinchZoomService: PinchZoomService) {
+  constructor() {
     effect(() => {
       this.image()!.nativeElement.addEventListener('load', () => {
         this.setup();
       });
     });
-  }
-
-  ngOnDestroy(): void {
-    this.pinchZoomService.destroy();
   }
 
   @HostListener('wheel', ['$event'])
