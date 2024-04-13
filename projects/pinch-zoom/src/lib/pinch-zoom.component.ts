@@ -130,6 +130,7 @@ export class PinchZoomComponent implements OnDestroy {
     this.limitScale();
     this.limitPosition();
 
+    this.image()!.nativeElement.style.transformOrigin = '0 0';
     this.image()!.nativeElement.style.transform = `rotate(0) translate(${this.left}px, ${this.top}px) scale(${this.scale}, ${this.scale})`;
   }
 
@@ -159,12 +160,12 @@ export class PinchZoomComponent implements OnDestroy {
     const { naturalHeight, naturalWidth } = this.image()!.nativeElement;
 
     const scaledImgHeight = naturalHeight * this.scale;
+    const scaledImgWidth = naturalWidth * this.scale;
 
-    const maxTop = (clientHeight * (this.scale / this.originalScale) - naturalHeight) / 2;
-    const minTop = maxTop - scaledImgHeight + clientHeight;
-
-    const maxLeft = (clientWidth * (this.scale / this.originalScale) - naturalWidth) / 2;
-    const minLeft = maxLeft - naturalWidth * this.scale + clientWidth;
+    const maxTop = 0;
+    const minTop = -(scaledImgHeight - clientHeight);
+    const maxLeft = 0;
+    const minLeft = -(scaledImgWidth - clientWidth);
 
     if(this.top > maxTop){
       this.top = maxTop;
@@ -180,15 +181,20 @@ export class PinchZoomComponent implements OnDestroy {
   }
 
   private moveImage(event: UIEvent, oldScale: number): void {
+    // we try to find the position on the original image and move this position to the same position on the image for this new scale
     const { clientX, clientY } = this.getPositionFor(event, 0);
     const elementPosition = this.container().nativeElement.getBoundingClientRect();
 
-    const xCenter = clientX - elementPosition.left;
-    const yCenter = clientY - elementPosition.top;
-    const scalingPercent = this.scale / this.originalScale;
-    console.log(xCenter, yCenter);
-    this.left = this.left - (scalingPercent * xCenter - xCenter);
-    this.top = this.top - (scalingPercent * yCenter - yCenter);
+    const x = (clientX - elementPosition.left);
+    const y = (clientY - elementPosition.top);
+    const dx = x / oldScale;
+    const dy = y / oldScale;
+
+    const leftOnOriginal = -(this.left / oldScale) + dx;
+    const topOnOriginal = -(this.top / oldScale) + dy;
+
+    this.left =  -(leftOnOriginal * this.scale) + x;
+    this.top = -(topOnOriginal * this.scale) + y;
   }
 }
 
