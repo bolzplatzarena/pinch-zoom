@@ -3,7 +3,7 @@ import {
   contentChild,
   effect,
   ElementRef,
-  HostListener,
+  HostListener, Renderer2,
   viewChild,
 } from '@angular/core';
 
@@ -16,13 +16,13 @@ const config = {
   standalone: true,
   imports: [],
   template: `
-    <div #container style="display: block; width: 100%; height: 100%;">
+    <div #container style="display: block; height: 100%; width: 100%;">
       <ng-content></ng-content>
     </div>
   `,
   styles: ``,
   host: {
-    style: 'display: block; width: 100%; height: 100%;'
+    style: 'display: block; height: 100%; width: 100%; overflow: hidden;'
   },
 })
 export class PinchZoomComponent {
@@ -39,7 +39,10 @@ export class PinchZoomComponent {
   private startX : number | null = null;
   private startY : number | null = null;
 
-  constructor() {
+  constructor(
+    private readonly elementRef: ElementRef,
+    private readonly renderer: Renderer2,
+    ) {
     effect(() => {
       this.image()!.nativeElement.addEventListener('load', () => {
         this.setup();
@@ -93,15 +96,40 @@ export class PinchZoomComponent {
     this.updateImageElement();
   }
 
+  @HostListener('gesturestart', ['$event'])
+  @HostListener('gesturechange', ['$event'])
+  @HostListener('gestureend', ['$event'])
+  onPinch(event: UIEvent & { scale: number, touches: TouchList }): void {
+    event.preventDefault();
+
+    console.log(event.scale);
+
+    const oldScale = this.scale;
+    this.scale += ((event.scale - 1) / 20);
+
+    this.limitScale();
+    this.moveImage(event, oldScale);
+    this.updateImageElement();
+  }
+
   private setup(): void {
-    this.image().nativeElement.draggable = false;
+    const image = this.image().nativeElement;
+    const container = this.container().nativeElement;
+    image.draggable = false;
 
     // log the size of the container and the image to console
-    const { clientHeight, clientWidth } = this.container()!.nativeElement;
-    const { naturalHeight, naturalWidth } = this.image()!.nativeElement;
+    const { clientHeight, clientWidth } = container;
+    const { naturalHeight, naturalWidth } = image;
+
     // calculate the scale factor to ensure image fits in container using matrix
     this.scale = Math.min(clientWidth / naturalWidth, clientHeight / naturalHeight);
     this.originalScale = this.scale;
+
+
+    this.renderer.setStyle(container, 'height', `${naturalHeight * this.scale}px`);
+    this.renderer.setStyle(container, 'width', `${naturalWidth * this.scale}px`);
+    this.renderer.setStyle(this.elementRef.nativeElement, 'height', `${naturalHeight * this.scale}px`);
+    this.renderer.setStyle(this.elementRef.nativeElement, 'width', `${naturalWidth * this.scale}px`);
 
     this.updateImageElement();
     this.originalLeft = this.left;
